@@ -67,8 +67,27 @@ class LinearRegressor:
         # Replace this code with the code you did in the previous laboratory session
 
         # Store the intercept and the coefficients of the model
-        self.intercept = None
-        self.coefficients = None
+
+        #recuperando el código de la práctica 3: 
+        # sabemos, por la teoria, que 
+        # y = bo + b1 x1 + b2 x2 + ... + bn xn 
+        # w = (Xt * X)^(-1) * Xt * y 
+        # donde bo será el primer término de w 
+
+   
+        fila_unos = np.ones((X.shape[0], 1)) 
+        X_completa = np.hstack((fila_unos, X))
+        #y_completa = np.append(1, y)
+        #calculamso el verctor w = (bo, b1, b2, ...)
+
+        Xt_X_inv =  np.linalg.inv(np.dot(np.transpose(X_completa), X_completa))
+        Xt_X_inv_Xt = np.dot (Xt_X_inv , np.transpose(X_completa))
+        resultados  = np.dot (Xt_X_inv_Xt, y)
+        #tomamos los coeficientes (b1, .., bn)
+        self.coefficients = resultados[1:]
+        # tomamos el bo como el intercept 
+        self.intercept = resultados[0]
+
 
     def fit_gradient_descent(self, X, y, learning_rate=0.01, iterations=1000):
         """
@@ -92,18 +111,24 @@ class LinearRegressor:
         self.intercept = np.random.rand() * 0.01
 
         # Implement gradient descent (TODO)
+
         for epoch in range(iterations):
-            predictions = None
+            # vemos , para nuestros valores 
+            # predictions = self.fit(self.coefficients, y)
+            predictions = self.coefficients * X + self.intercept
             error = predictions - y
 
             # TODO: Write the gradient values and the updates for the paramenters
-            gradient = None
-            self.intercept -= None
-            self.coefficients -= None
+
+            gradient_b = np.sum(error * X) / m
+            gradient_w =  np.sum(error) / m 
+
+            self.intercept -= learning_rate * gradient_b
+            self.coefficients -= learning_rate * gradient_w 
 
             # TODO: Calculate and print the loss every 10 epochs
             if epoch % 1000 == 0:
-                mse = None
+                mse = np.sum(error**2) / m  
                 print(f"Epoch {epoch}: MSE = {mse}")
 
     def predict(self, X):
@@ -122,11 +147,27 @@ class LinearRegressor:
         """
 
         # Paste your code from last week
+    
 
         if self.coefficients is None or self.intercept is None:
             raise ValueError("Model is not yet fitted")
 
-        return None
+        if np.ndim(X) == 1:
+            # TODO: Predict when X is only one variable
+            # y = wx + b 
+            
+            predictions = self.coefficients * X + self.intercept
+        else:
+            # TODO: Predict when X is more than one variable
+            predictions = self.intercept 
+            producto = self.coefficients * X
+            predictions += producto.sum(axis = 1 )
+
+            
+        return predictions
+
+        
+    
 
 
 def evaluate_regression(y_true, y_pred):
