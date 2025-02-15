@@ -38,9 +38,11 @@ class LinearRegressor:
             raise ValueError(
                 f"Method {method} not available for training linear regression."
             )
+        # convierte a matriz la X si no lo era -> haremos fit multiple no fit simple. 
         if np.ndim(X) == 1:
             X = X.reshape(-1, 1)
 
+        # esta línea añade una fila de unos a la matriz X, por lo que al fittear tenemos el b. 
         X_with_bias = np.insert(
             X, 0, 1, axis=1
         )  # Adding a column of ones for intercept
@@ -73,10 +75,13 @@ class LinearRegressor:
         # y = bo + b1 x1 + b2 x2 + ... + bn xn 
         # w = (Xt * X)^(-1) * Xt * y 
         # donde bo será el primer término de w 
+        X_completa = X
 
-   
-        fila_unos = np.ones((X.shape[0], 1)) 
-        X_completa = np.hstack((fila_unos, X))
+        # no tenemos que insertar una fila de 1s porque ya lo inserta el fit. 
+        # dejamos esta parte comentada. 
+        # fila_unos = np.ones((X.shape[0], 1)) 
+        # X_completa = np.hstack((fila_unos, X))
+        
         #y_completa = np.append(1, y)
         #calculamso el verctor w = (bo, b1, b2, ...)
 
@@ -112,16 +117,17 @@ class LinearRegressor:
 
         # Implement gradient descent (TODO)
 
+
         for epoch in range(iterations):
             # vemos , para nuestros valores 
             # predictions = self.fit(self.coefficients, y)
-            predictions = self.coefficients * X + self.intercept
+            predictions =  np.dot(X[:, 1:], self.coefficients) + self.intercept 
             error = predictions - y
 
             # TODO: Write the gradient values and the updates for the paramenters
 
-            gradient_b = np.sum(error * X) / m
-            gradient_w =  np.sum(error) / m 
+            gradient_b = np.sum(error) / m
+            gradient_w =   np.dot(X[:, 1:].T, error) / m
 
             self.intercept -= learning_rate * gradient_b
             self.coefficients -= learning_rate * gradient_w 
@@ -152,19 +158,33 @@ class LinearRegressor:
         if self.coefficients is None or self.intercept is None:
             raise ValueError("Model is not yet fitted")
 
+        X = np.asarray(X)
+        w = self.coefficients
+        b = self.intercept
         if np.ndim(X) == 1:
             # TODO: Predict when X is only one variable
             # y = wx + b 
-            
-            predictions = self.coefficients * X + self.intercept
-        else:
-            # TODO: Predict when X is more than one variable
-            predictions = self.intercept 
-            producto = self.coefficients * X
-            predictions += producto.sum(axis = 1 )
 
+            # x lo convertimos en un array de 2D con una columna 
+            X = X.reshape(-1, 1)
+
+            # si w es un solo numero, lo convertios en un array: 
+            if w.ndim == 0:
+                w = np.array([w])
+
+        else: 
+       
+            # TODO: Predict when X is more than one variable 
+            # calculamos y = b + x * w cuando X es una matriz 2D 
+            # convertimos la w en una matriz para poder hacer el calculo. 
+
+            w = np.asarray(w)
+            if w.ndim == 1:
+                w = w.reshape(-1, 1)
             
-        return predictions
+        predictions =  b + X @ w
+
+        return predictions.flatten()
 
         
     
@@ -184,15 +204,19 @@ def evaluate_regression(y_true, y_pred):
 
     # R^2 Score
     # TODO
-    r_squared = None
+    RSS = np.sum((y_true-y_pred)**2)
+    TSS = np.sum((y_true - np.mean(y_true))**2)
+    r_squared = 1 - (RSS/TSS)
 
     # Root Mean Squared Error
     # TODO
-    rmse = None
+    N = len(y_true)
+    rmse = np.sqrt(np.sum((y_true - y_pred)**2)/N) 
+
 
     # Mean Absolute Error
     # TODO
-    mae = None
+    mae = np.sum(abs(y_true - y_pred))/N
 
     return {"R2": r_squared, "RMSE": rmse, "MAE": mae}
 
@@ -217,6 +241,7 @@ def one_hot_encode(X, categorical_indices, drop_first=False):
 
         # TODO: Find the unique categories (works with strings)
         unique_values = None
+
 
         # TODO: Create a one-hot encoded matrix (np.array) for the current categorical column
         one_hot = None
