@@ -237,20 +237,27 @@ def one_hot_encode(X, categorical_indices, drop_first=False):
     X_transformed = X.copy()
     for index in sorted(categorical_indices, reverse=True):
         # TODO: Extract the categorical column
-        categorical_column = None
+        categorical_column = X_transformed[:,index]
 
         # TODO: Find the unique categories (works with strings)
-        unique_values = None
+        unique_values = np.unique(categorical_column)
 
 
         # TODO: Create a one-hot encoded matrix (np.array) for the current categorical column
-        one_hot = None
+        one_hot = np.array([[1 if value == category else 0 for category in unique_values]
+                            for value in categorical_column])
 
         # Optionally drop the first level of one-hot encoding
-        if drop_first:
+        if drop_first and one_hot.shape[1] > 1:
             one_hot = one_hot[:, 1:]
 
         # TODO: Delete the original categorical column from X_transformed and insert new one-hot encoded columns
-        X_transformed = None
+        
+        # elimina la columna index de la matriz 
+        X_transformed = np.delete(X_transformed, index, axis=1)
+        
+        # cogemos toda la matriz y concatenamos lo anterior +  la columna nueva + lo siguiente 
+        X_transformed = np.concatenate((X_transformed[:, :index], one_hot, X_transformed[:, index:]), axis=1)
+
 
     return X_transformed
