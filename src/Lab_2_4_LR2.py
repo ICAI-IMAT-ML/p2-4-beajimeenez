@@ -50,8 +50,9 @@ class LinearRegressor:
         if method == "least_squares":
             self.fit_multiple(X_with_bias, y)
         elif method == "gradient_descent":
-            self.fit_gradient_descent(X_with_bias, y, learning_rate, iterations)
-
+            [l1, l2, l3] = self.fit_gradient_descent(X_with_bias, y, learning_rate, iterations)
+            return [l1, l2, l3]
+        
     def fit_multiple(self, X, y):
         """
         Fit the model using multiple linear regression (more than one independent variable).
@@ -113,29 +114,48 @@ class LinearRegressor:
         self.coefficients = (
             np.random.rand(X.shape[1] - 1) * 0.01
         )  # Small random numbers
+
         self.intercept = np.random.rand() * 0.01
 
         # Implement gradient descent (TODO)
-
+        # para plotearlo en el ultimo apartado hacemos las listas: 
+        losses = []
+        valores_w = []
+        valores_b = []
 
         for epoch in range(iterations):
             # vemos , para nuestros valores 
             # predictions = self.fit(self.coefficients, y)
-            predictions =  np.dot(X[:, 1:], self.coefficients) + self.intercept 
+            # predictions =  np.dot(X[:, 1:], self.coefficients) + self.intercept 
+            predictions = self.predict(X[:,1:])
             error = predictions - y
 
             # TODO: Write the gradient values and the updates for the paramenters
 
-            gradient_b = np.sum(error) / m
-            gradient_w =   np.dot(X[:, 1:].T, error) / m
+            #gradient_b = np.sum(error) / m
+            #gradient_w = np.dot(X[:, 1:].T, error) / m
+            #gradient_w = np.dot(X.T, error) / m
 
-            self.intercept -= learning_rate * gradient_b
-            self.coefficients -= learning_rate * gradient_w 
+            #self.intercept -= learning_rate * gradient_b
+            #self.coefficients -= learning_rate * gradient_w 
 
+            #gradient= np.dot(X.T, error) / m  #hacemos el gradiente de w entero y separamos a b (1º indice )
+            gradient = (1/m) * np.dot(error, X)
+            # Corrección en la actualización de parámetros
+            self.coefficients -= learning_rate * gradient[1:] 
+            self.intercept -= learning_rate * gradient[0]  
+            
             # TODO: Calculate and print the loss every 10 epochs
-            if epoch % 1000 == 0:
+            if epoch % 10000 == 0:
                 mse = np.sum(error**2) / m  
                 print(f"Epoch {epoch}: MSE = {mse}")
+
+            loss = 1/len(y) * sum(error**2) #funcion de perdida 
+            losses.append(loss)
+            valores_b.append(self.intercept)
+            valores_w.append(self.coefficients.copy())
+
+        return [losses, valores_w, valores_b]
 
     def predict(self, X):
         """
@@ -157,20 +177,19 @@ class LinearRegressor:
 
         if self.coefficients is None or self.intercept is None:
             raise ValueError("Model is not yet fitted")
+    
 
-        X = np.asarray(X)
-        w = self.coefficients
-        b = self.intercept
         if np.ndim(X) == 1:
             # TODO: Predict when X is only one variable
             # y = wx + b 
 
             # x lo convertimos en un array de 2D con una columna 
-            X = X.reshape(-1, 1)
+            #X = X.reshape(-1, 1)
 
             # si w es un solo numero, lo convertios en un array: 
-            if w.ndim == 0:
-                w = np.array([w])
+            #if w.ndim == 0:
+               # w = np.array([w])
+            predictions = self.intercept + X * self.coefficients
 
         else: 
        
@@ -178,13 +197,13 @@ class LinearRegressor:
             # calculamos y = b + x * w cuando X es una matriz 2D 
             # convertimos la w en una matriz para poder hacer el calculo. 
 
-            w = np.asarray(w)
-            if w.ndim == 1:
-                w = w.reshape(-1, 1)
+            #w = np.asarray(w)
+            #if w.ndim == 1:
+                #w = w.reshape(-1, 1)
             
-        predictions =  b + X @ w
+            predictions = self.intercept + np.dot(X, self.coefficients)
 
-        return predictions.flatten()
+        return predictions
 
         
     
@@ -235,29 +254,29 @@ def one_hot_encode(X, categorical_indices, drop_first=False):
         np.ndarray: Transformed array with one-hot encoded columns.
     """
     X_transformed = X.copy()
+    for i in sorted(categorical_indices, reverse=True):
+        X_transformed = np.delete(X_transformed, i, 1)
+
     for index in sorted(categorical_indices, reverse=True):
         # TODO: Extract the categorical column
-        categorical_column = X_transformed[:,index]
+        categorical_column = X[:,index]
 
         # TODO: Find the unique categories (works with strings)
         unique_values = np.unique(categorical_column)
 
 
         # TODO: Create a one-hot encoded matrix (np.array) for the current categorical column
-        one_hot = np.array([[1 if value == category else 0 for category in unique_values]
-                            for value in categorical_column])
+        one_hot = np.array([[1 if categorical_column[i] == valor else 0 for i in range(len(categorical_column))] for valor in unique_values]).T
 
         # Optionally drop the first level of one-hot encoding
         if drop_first and one_hot.shape[1] > 1:
             one_hot = one_hot[:, 1:]
 
         # TODO: Delete the original categorical column from X_transformed and insert new one-hot encoded columns
-        
-        # elimina la columna index de la matriz 
-        X_transformed = np.delete(X_transformed, index, axis=1)
-        
-        # cogemos toda la matriz y concatenamos lo anterior +  la columna nueva + lo siguiente 
-        X_transformed = np.concatenate((X_transformed[:, :index], one_hot, X_transformed[:, index:]), axis=1)
+        # elimina la columna index de la matriz (arriba ya)
 
+        # cogemos toda la matriz y concatenamos lo anterior +  la columna nueva + lo siguiente 
+        X_transformed = np.concatenate((one_hot, X_transformed), axis=1)
+        
 
     return X_transformed
